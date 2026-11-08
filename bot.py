@@ -8,11 +8,10 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir."}
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
-    # Tam olarak istediğin o mor neon daireli fütüristik arka plan yapısı
     html_kod_blogu = """
     <!DOCTYPE html>
     <html lang="tr">
@@ -20,13 +19,24 @@ def dashboard():
         <meta charset="UTF-8">
         <title>NpcBot Yönetim Paneli</title>
         <style>
-            body { background: url('https://peakpx.com') no-repeat center center fixed; background-size: cover; color: #dbdee1; font-family: sans-serif; padding: 20px; }
-            .panel-container { max-width: 1000px; margin: auto; background: rgba(20, 20, 25, 0.65); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 25px; border-radius: 16px; box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); border: 2px solid #a855f7; }
+            body { 
+                background: url('https://peakpx.com') no-repeat center center fixed; 
+                background-size: cover; color: #dbdee1; font-family: sans-serif; padding: 20px; 
+            }
+            .panel-container { 
+                max-width: 1000px; margin: auto; background: rgba(20, 20, 25, 0.65); backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px); padding: 25px; border-radius: 16px; 
+                box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); border: 2px solid #a855f7;
+            }
             h1 { color: #fff; font-size: 26px; font-weight: bold; margin-bottom: 5px; text-shadow: 0 0 10px rgba(168,85,247,0.5); }
             .subtitle { color: #949ba4; font-size: 14px; margin-bottom: 25px; }
             .section-title { font-size: 13px; text-transform: uppercase; color: #a855f7; font-weight: bold; margin-top: 25px; margin-bottom: 12px; letter-spacing: 1px; }
             .btn-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 5px; }
-            .btn-custom { padding: 10px 22px; font-weight: 600; border-radius: 10px; font-size: 14px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; background: rgba(0,0,0,0.4); }
+            .btn-custom { 
+                padding: 10px 22px; font-weight: 600; border-radius: 10px; font-size: 14px; 
+                border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; background: rgba(0,0,0,0.4);
+            }
+            .btn-custom:active { transform: scale(0.95); }
             .btn-green { color: #2ecc71; border-color: #2ecc71; } .btn-green:hover { background: #2ecc71; color: white; box-shadow: 0 0 20px #2ecc71; }
             .btn-red { color: #e74c3c; border-color: #e74c3c; } .btn-red:hover { background: #e74c3c; color: white; box-shadow: 0 0 20px #e74c3c; }
             .btn-blue { color: #3498db; border-color: #3498db; } .btn-blue:hover { background: #3498db; color: white; box-shadow: 0 0 20px #3498db; }
@@ -143,10 +153,11 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
 async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
-        guild = bot.guilds
+        guild = bot.guilds[0]
         if islem == 'kanal-kilidi':
             kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
             overwrite = kanal.overwrites_for(guild.default_role)
@@ -178,7 +189,6 @@ async def discord_sistem_yonet(islem, network_id, text_data):
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Islem basarili."
     except Exception as e: return f"Hata: {e}"
-
 @bot.event
 async def on_member_join(member):
     rol = discord.utils.get(member.guild.roles, name="Uye")
