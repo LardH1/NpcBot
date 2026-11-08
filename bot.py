@@ -12,7 +12,6 @@ def dashboard():
     sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
-    # Çökmeleri ve Jinja2 çakışmalarını önleyen tamamen revize edilmiş temiz HTML yapısı
     html_kod_blogu = """
     <!DOCTYPE html>
     <html lang="tr">
@@ -161,35 +160,35 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-async def discord_sistem_yonet(islem, network_id, text_data):
+async def discord_sistem_yonet(islem, Tech_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
         guild = bot.guilds
         if islem == 'kanal-kilidi':
-            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(Tech_id))
             overwrite = kanal.overwrites_for(guild.default_role)
-            if network_id == "kilitle": overwrite.send_messages = False
+            if Tech_id == "kilitle": overwrite.send_messages = False
             else: overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
-            return f"Basarili: Kanal ayarlandi."
+            return "Kanal ayarlandi."
         if islem == 'yavas-mod':
             kanal = guild.get_channel(int(text_data))
             await kanal.edit(slowmode_delay=int(network_id))
             return f"Basarili: Yavas mod {network_id} saniye yapildi."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
-            kanal = guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(Tech_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
             return "Basarili: Mesaj iletildi."
         if islem == 'mesaj-temizle':
-            kanal = guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(Tech_id))
             silinen = await kanal.purge(limit=int(text_data))
             return f"Basarili: {len(silinen)} adet mesaj temizlendi."
         if islem == 'ban-ac':
-            user = await bot.fetch_user(int(network_id))
+            user = await bot.fetch_user(int(Tech_id))
             await guild.unban(user, reason=text_data)
             return f"Basarili: {user.name} yasagi kaldirildi."
-        member = guild.get_member(int(network_id))
+        member = guild.get_member(int(Tech_id))
         if islem == 'sustur':
             await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
             return f"Basarili: {member.name} susturuldu."
@@ -201,7 +200,6 @@ async def discord_sistem_yonet(islem, network_id, text_data):
         return "Basarili."
     except Exception as e: return f"Discord Hatasi: {e}"
 
-# --- DEĞİŞMEYEN HOŞ GELDİN OYUNU ---
 @bot.event
 async def on_member_join(member):
     try: await member.send(f"Merhaba {member.name}! Sunucumuza hos geldin.")
@@ -214,7 +212,6 @@ class PanelButonlari(discord.ui.View):
     async def duyuru_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("📢 Duyuru sistemi web panelde aktiftir.", ephemeral=True)
 
-# --- SADECE YÖNETİCİLERİN YAPABİLDİĞİ VE SENİN GERÇEK LİNKİNİ İÇEREN ÖZEL PANEL KOMUTU ---
 @bot.tree.command(name="panel-gonder", description="Yönetim panelini kanala yollar (Sadece Yönetici).")
 @app_commands.checks.has_permissions(administrator=True)
 async def panel_gonder(interaction: discord.Interaction):
@@ -252,7 +249,6 @@ async def on_ready():
     await bot.tree.sync()
 
 if __name__ == "__main__":
-    # --- RENDER İÇİN ZORUNLU PORT AYARI (ÇÖKMEYİ ENGELLER) ---
     port = int(os.environ.get("PORT", 10000))
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False), daemon=True).start()
     bot.run(os.environ.get('DISCORD_TOKEN'))
