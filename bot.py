@@ -8,8 +8,8 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir ve sun
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
     html_kod_blogu = """
@@ -160,41 +160,41 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-async def discord_sistem_yonet(islem, Tech_id, text_data):
+async def discord_sistem_yonet(islem, hedef_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
-        guild = bot.guilds
+        guild = bot.guilds[0]
         if islem == 'kanal-kilidi':
-            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(Tech_id))
+            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(hedef_id))
+            if not kanal: return "Hata: Kanal bulunamadi."
             overwrite = kanal.overwrites_for(guild.default_role)
-            if Tech_id == "kilitle": overwrite.send_messages = False
+            if hedef_id == "kilitle": overwrite.send_messages = False
             else: overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
             return "Kanal ayarlandi."
         if islem == 'yavas-mod':
             kanal = guild.get_channel(int(text_data))
-            await kanal.edit(slowmode_delay=int(network_id))
-            return f"Basarili: Yavas mod {network_id} saniye yapildi."
+            if not kanal: return "Hata: Kanal bulunamadi."
+            await kanal.edit(slowmode_delay=int(hedef_id))
+            return f"Basarili: Yavas mod ayarlandi."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
-            kanal = guild.get_channel(int(Tech_id))
+            kanal = guild.get_channel(int(hedef_id))
+            if not kanal: return "Hata: Kanal bulunamadi."
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
             return "Basarili: Mesaj iletildi."
         if islem == 'mesaj-temizle':
-            kanal = guild.get_channel(int(Tech_id))
-            silinen = await kanal.purge(limit=int(text_data))
-            return f"Basarili: {len(silinen)} adet mesaj temizlendi."
+            kanal = guild.get_channel(int(hedef_id))
+            if not kanal: return "Hata: Kanal bulunamadi."
+            await kanal.purge(limit=int(text_data))
+            return "Temizlendi."
         if islem == 'ban-ac':
-            user = await bot.fetch_user(int(Tech_id))
+            user = await bot.fetch_user(int(hedef_id))
             await guild.unban(user, reason=text_data)
             return f"Basarili: {user.name} yasagi kaldirildi."
-        member = guild.get_member(int(Tech_id))
-        if islem == 'sustur':
-            await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
-            return f"Basarili: {member.name} susturuldu."
-        elif islem == 'susturmayi-kaldir':
-            await member.timeout(None, reason=text_data)
-            return f"Basarili: {member.name} cezasi acildi."
+        member = guild.get_member(int(hedef_id))
+        if not member: return "Hata: Kullanici bulunamadi."
+        if islem == 'sustur': await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
         elif islem == 'at': await member.kick(reason=text_data)
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Basarili."
@@ -204,7 +204,7 @@ async def discord_sistem_yonet(islem, Tech_id, text_data):
 async def on_member_join(member):
     try: await member.send(f"Merhaba {member.name}! Sunucumuza hos geldin.")
     except discord.Forbidden: pass
-    rol = discord.utils.get(member.guild.roles, name=bot_ayarlari.get("kayit_rolu", "Uye"))
+    rol = discord.utils.get(member.guild.roles, name="Uye")
     if rol: await member.add_roles(rol)
 class PanelButonlari(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
