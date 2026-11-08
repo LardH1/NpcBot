@@ -205,7 +205,7 @@ class PanelButonlari(discord.ui.View):
 async def panel_gonder(interaction: discord.Interaction):
     guild = interaction.guild
     embed = discord.Embed(title="☕ NpcBot Yönetim Paneli", color=0x5865f2)
-    embed.description = "Aşağıdaki butonlardan istediğin işlemi seç.\n\n🌐 **7/24 Canlı Web Yönetim Linki:**\nhttps://onrender.com"
+    embed.description = "Aşağıdaki butonlardan istediğin işlemi seç.\n\n🌐 **7/24 Canlı Web Yönetim Linki:**\nhttps://npcbot-30a2.onrender.com"
     await interaction.response.send_message(embed=embed, view=PanelButonlari())
 
 @panel_gonder.error
