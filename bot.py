@@ -8,8 +8,8 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir ve sun
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
     html_kod_blogu = """
@@ -74,6 +74,12 @@ def dashboard():
             <button class="btn-custom btn-dark-gray" onclick="openModal('not-ekle')">Not Ekle</button>
             <button class="btn-custom btn-dark-gray" onclick="openModal('mesaj-temizle')">Mesaj Temizle</button>
         </div>
+        <div class="btn-grid mt-2">
+            <button class="btn-custom btn-dark-gray" onclick="openModal('kanal-kilidi')">Kanal Kilidi</button>
+            <button class="btn-custom btn-dark-gray" onclick="openModal('yavas-mod')">Yavaş Mod</button>
+            <button class="btn-custom btn-dark-gray" onclick="openModal('durum')">Durum</button>
+        </div>
+        <div class="section-title">Canlı Durum</div>
         <div class="stats-box">
             <p>● PAN_UYE üye • PAN_SES seste • 0 susturulmuş • 0 uyarılı</p>
             <p>● Gecikme: PAN_MSms • Panel: PAN_DURUM 🟢</p>
@@ -113,12 +119,17 @@ def dashboard():
                 baslik.innerText = action.toUpperCase() + " Gönderme Menüsü";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Mesaj İçeriği:";
             } else if(action === 'muzik-oynat') {
-                baslik.innerText = "🎵 Canlı İnternet Radyo / Müzik Sistemi";
-                idEtiket.innerText = "Ses Kanalı ID'si (Kanal ID'sini girin):"; 
-                icerikEtiket.innerText = "İnternet Radyo Linki (Boş bırakırsanız kesintisiz pop çalar):";
+                baslik.innerText = "🎵 Canlı Ses / Müzik Oynatma Motoru";
+                idEtiket.innerText = "Ses Kanalı ID'si:"; icerikEtiket.innerText = "Canlı Müzik / Radyo Stream URL:";
             } else if(action === 'mesaj-temizle') {
                 baslik.innerText = "Mesaj Temizleme";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
+            } else if(action === 'kanal-kilidi') {
+                baslik.innerText = "Kanal Kilidi";
+                idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
+            } else if(action === 'yavas-mod') {
+                baslik.innerText = "Yavaş Mod";
+                idEtiket.innerText = "Saniye (0 = kapat):"; icerikEtiket.innerText = "Kanal ID:";
             } else {
                 baslik.innerText = action.toUpperCase() + " Menüsü";
                 idEtiket.innerText = "Kullanıcı ID:"; icerikEtiket.innerText = "Gerekçe / Rol Adı:";
@@ -156,25 +167,37 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
-        guild = bot.guilds
+        guild = bot.guilds[0]
         
-        # --- CANLI İNTERNET MÜZİK MOTORU (FFMPEG ENTEGRELİ) ---
+        # --- SİSTEM ENGELLERİNİ AŞAN ENTEGRE SES MOTORU ---
         if islem == 'muzik-oynat':
             kanal = guild.get_channel(int(network_id))
             if not kanal: return "Hata: Ses kanali ID'si gecersiz!"
             
-            # Eğer boş bırakıldıysa kesintisiz Number1 FM canlı pop yayın linkini açar
-            radyo_url = text_data if (text_data and text_data.startswith("http")) else "https://turkmedya.com.tr"
+            # Eğer boş bırakılırsa Number1 FM pop müzik akışını açar
+            radyo_url = text_data if (text_data and text_data.startswith("http")) else "https://numberone.com.tr"
             
             vc = discord.utils.get(bot.voice_clients, guild=guild)
             if vc: await vc.disconnect()
             
             vc = await kanal.connect()
-            # Canlı akışı internetten doğrudan sese aktaran kararlı motor ayarı
-            ffmpeg_options = {'options': '-vn -loglevel quiet', 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'}
-            vc.play(discord.FFmpegPCMAudio(radyo_url, **ffmpeg_options))
-            return f"Basarili: NpcBot {kanal.name} ses kanalinda kesintisiz yayina basladi!"
+            vc.play(discord.FFmpegPCMAudio(radyo_url))
+            return f"Basarili: NpcBot {kanal.name} ses kanalinda kesintisiz müzik yayinini baslatti!"
 
+        if islem == 'kanal-kilidi':
+            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
+            overwrite = kanal.overwrites_for(guild.default_role)
+            if network_id == "kilitle":
+                overwrite.send_messages = False
+                await kanal.set_permissions(guild.default_role, overwrite=overwrite)
+                return f"Basarili: {kanal.name} kilitlendi."
+            overwrite.send_messages = None
+            await kanal.set_permissions(guild.default_role, overwrite=overwrite)
+            return f"Basarili: {kanal.name} acildi."
+        if islem == 'yavas-mod':
+            kanal = guild.get_channel(int(text_data))
+            await kanal.edit(slowmode_delay=int(network_id))
+            return f"Basarili: Yavas mod {network_id} saniye."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
             kanal = guild.get_channel(int(network_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
@@ -200,9 +223,7 @@ async def discord_sistem_yonet(islem, network_id, text_data):
         return "Basarili."
     except Exception as e: return f"Discord Hatasi: {e}"
 class PanelButonlari(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
+    def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Duyuru", style=discord.ButtonStyle.green, row=0)
     async def duyuru_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("📢 Duyuru sistemi web panelde aktiftir.", ephemeral=True)
@@ -212,9 +233,6 @@ class PanelButonlari(discord.ui.View):
     @discord.ui.button(label="Uyar", style=discord.ButtonStyle.danger, row=1)
     async def uyar_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("⚠️ Uyar sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Sustur", style=discord.ButtonStyle.danger, row=1)
-    async def sustur_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🔇 Sustur sistemi web panelde aktiftir.", ephemeral=True)
 
 @bot.tree.command(name="panel-gonder", description="Yönetim panelini kanala yollar (Sadece Yönetici).")
 @app_commands.checks.has_permissions(administrator=True)
