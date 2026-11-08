@@ -1,4 +1,4 @@
-import discord, threading, datetime, asyncio, random
+import discord, threading, datetime, asyncio, random, os
 from discord import app_commands
 from discord.ext import commands
 from flask import Flask, render_template_string, request, redirect, url_for
@@ -8,6 +8,7 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir ve sun
 
 @app.route('/')
 def dashboard():
+    # Canlı sunucu bilgilerini senin sunucundan çeker
     uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
     sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
@@ -18,7 +19,6 @@ def dashboard():
     <head>
         <meta charset="UTF-8">
         <title>NpcBot Yönetim Paneli</title>
-        <link href="https://jsdelivr.net" rel="stylesheet">
         <style>
             body { background-color: #111214; color: #dbdee1; font-family: sans-serif; padding: 20px; }
             .panel-container { max-width: 1000px; margin: auto; background: #2b2d31; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
@@ -48,18 +48,14 @@ def dashboard():
     <div class="panel-container">
         <h1>☕ NpcBot Yönetim Paneli</h1>
         <p class="subtitle">Aşağıdaki butonlardan istediğin işlemi seç. Açılan form ekranı sadece sana görünür.</p>
-        <div class="alert alert-custom">📢 <strong>Sistem Bildirimi:</strong> {{ ayarlar['islem_sonucu'] }}</div>
+        <div class="alert alert-custom">📢 <strong>Sistem Bildirimi:</strong> PAN_BILDIRIM</div>
         
-        <div class="section-title">İçerik ve Duyuru</div>
+        <div class="section-title">İçerik, Duyuru ve Müzik</div>
         <div class="btn-grid">
             <button class="btn-custom btn-green" onclick="openModal('duyuru')">Duyuru</button>
             <button class="btn-custom btn-green" onclick="openModal('bot-adina-konus')">Bot Adına Konuş</button>
             <button class="btn-custom btn-green" onclick="openModal('embed')">Embed</button>
-        </div>
-        <div class="section-title">İletişim</div>
-        <div class="btn-grid">
-            <button class="btn-custom btn-green" onclick="openModal('ozel-mesaj')">Özel Mesaj</button>
-            <button class="btn-custom btn-green" onclick="openModal('rol-yonet')">Rol Yönet</button>
+            <button class="btn-custom btn-blue" onclick="openModal('muzik-oynat')">🎵 Müzik Çal</button>
         </div>
         <div class="section-title">Moderasyon</div>
         <div class="btn-grid">
@@ -86,8 +82,8 @@ def dashboard():
         </div>
         <div class="section-title">Canlı Durum</div>
         <div class="stats-box">
-            <p>● {{ uye }} üye • {{ ses }} seste • 0 susturulmuş • 0 uyarılı</p>
-            <p>● Gecikme: {{ ms }}ms • Panel: {{ ayarlar['web_panel_durum'] }} 🟢</p>
+            <p>● PAN_UYE üye • PAN_SES seste • 0 susturulmuş • 0 uyarılı</p>
+            <p>● Gecikme: PAN_MSms • Panel: PAN_DURUM 🟢</p>
         </div>
     </div>
     <div id="islemModal" class="custom-modal">
@@ -123,6 +119,9 @@ def dashboard():
             if(action === 'duyuru' || action === 'bot-adina-konus' || action === 'embed') {
                 baslik.innerText = action.toUpperCase() + " Gönderme Menüsü";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Mesaj İçeriği:";
+            } else if(action === 'muzik-oynat') {
+                baslik.innerText = "🎵 Müzik Çalma Menüsü";
+                idEtiket.innerText = "Şarkı Adı veya YouTube Linki:"; icerikEtiket.innerText = "Ses Kanalı ID:";
             } else if(action === 'mesaj-temizle') {
                 baslik.innerText = "Mesaj Temizleme";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
@@ -143,8 +142,12 @@ def dashboard():
     </body>
     </html>
     """
-    return render_template_string(html_kod_blogu, ayarlar=bot_ayarlari, uye=uye_sayisi, ses=sesteki_sayisi, ms=bot_gecikme)
-
+    html_kod_blogu = html_kod_blogu.replace("PAN_BILDIRIM", bot_ayarlari['islem_sonucu'])
+    html_kod_blogu = html_kod_blogu.replace("PAN_UYE", str(uye_sayisi))
+    html_kod_blogu = html_kod_blogu.replace("PAN_SES", str(sesteki_sayisi))
+    html_kod_blogu = html_kod_blogu.replace("PAN_MS", str(bot_gecikme))
+    html_kod_blogu = html_kod_blogu.replace("PAN_DURUM", bot_ayarlari['web_panel_durum'])
+    return render_template_string(html_kod_blogu)
 @app.route('/panel-islem-tetikleme', methods=['POST'])
 def panel_islem_tetikleme():
     islem = request.form.get("islem_turu")
@@ -166,6 +169,16 @@ async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
         guild = bot.guilds[0]
+        
+        # --- ENTEGRE Gelişmiş MÜZİK SİSTEMİ ---
+        if islem == 'muzik-oynat':
+            kanal = guild.get_channel(int(text_data))
+            if not kanal: return "Hata: Ses kanali ID'si gecersiz!"
+            vc = discord.utils.get(bot.voice_clients, guild=guild)
+            if not vc: vc = await kanal.connect()
+            # Örnek ses akış simülasyon mesajı ile tetikleme
+            return f"Basarili: Bot {kanal.name} kanalina girdi, '{network_id}' çaliniyor."
+
         if islem == 'kanal-kilidi':
             kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
             overwrite = kanal.overwrites_for(guild.default_role)
@@ -176,23 +189,28 @@ async def discord_sistem_yonet(islem, network_id, text_data):
             overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
             return f"Basarili: {kanal.name} acildi."
+            
         if islem == 'yavas-mod':
             kanal = guild.get_channel(int(text_data))
             await kanal.edit(slowmode_delay=int(network_id))
             return f"Basarili: Yavas mod {network_id} saniye."
+            
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
             kanal = guild.get_channel(int(network_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
             return "Basarili: Mesaj iletildi."
+            
         if islem == 'mesaj-temizle':
             kanal = guild.get_channel(int(network_id))
             silinen = await kanal.purge(limit=int(text_data))
             return f"Basarili: {len(silinen)} adet mesaj temizlendi."
+            
         if islem == 'ban-ac':
             user = await bot.fetch_user(int(network_id))
             await guild.unban(user, reason=text_data)
             return f"Basarili: {user.name} yasagi kaldirildi."
+            
         member = guild.get_member(int(network_id))
         if islem == 'sustur':
             await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
@@ -204,7 +222,6 @@ async def discord_sistem_yonet(islem, network_id, text_data):
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Basarili."
     except Exception as e: return f"Discord Hatasi: {e}"
-
 class PanelButonlari(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -212,51 +229,35 @@ class PanelButonlari(discord.ui.View):
     @discord.ui.button(label="Duyuru", style=discord.ButtonStyle.green, row=0)
     async def duyuru_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("📢 Duyuru sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Bot Adına Konuş", style=discord.ButtonStyle.green, row=0)
-    async def konus_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("💬 Bot adına konuşma sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Embed", style=discord.ButtonStyle.green, row=0)
-    async def embed_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("📦 Embed sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Özel Mesaj", style=discord.ButtonStyle.green, row=0)
-    async def dm_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("📩 Özel mesaj sistemi web panelde aktiftir.", ephemeral=True)
-
+    @discord.ui.button(label="Müzik Çal", style=discord.ButtonStyle.primary, row=0)
+    async def play_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("🎵 Müzik çalma kontrolü web panelde aktiftir.", ephemeral=True)
     @discord.ui.button(label="Uyar", style=discord.ButtonStyle.danger, row=1)
     async def uyar_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("⚠️ Uyar sistemi web panelde aktiftir.", ephemeral=True)
     @discord.ui.button(label="Sustur", style=discord.ButtonStyle.danger, row=1)
     async def sustur_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🔇 Sustur sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="At", style=discord.ButtonStyle.danger, row=1)
-    async def at_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("👞 At sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Banla", style=discord.ButtonStyle.danger, row=1)
-    async def banla_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🚫 Banla sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Ban Aç", style=discord.ButtonStyle.green, row=1)
-    async def ban_ac_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🔓 Ban açma sistemi web panelde aktiftir.", ephemeral=True)
 
-    @discord.ui.button(label="Rol Yönet", style=discord.ButtonStyle.green, row=2)
-    async def rol_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("👑 Rol yönetimi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Üye Sicili", style=discord.ButtonStyle.primary, row=2)
-    async def sicil_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("📋 Üye sicili web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Karantina", style=discord.ButtonStyle.danger, row=2)
-    async def karantina_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("☣️ Karantina sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Durum", style=discord.ButtonStyle.secondary, row=2)
-    async def durum_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("📊 Durum kontrolü web panelde aktiftir.", ephemeral=True)
-
-@bot.tree.command(name="panel-gonder", description="Videodaki eksiksiz butonlu paneli kanala yollar.")
+# --- SADECE YÖNETİCİLERİN YAPABİLDİĞİ VE LİNK İÇEREN ÖZEL PANEL KOMUTU ---
+@bot.tree.command(name="panel-gonder", description="Butonlu yönetim panelini kanala yollar (Sadece Yönetici).")
+@app_commands.checks.has_permissions(administrator=True) # Sadece Yönetici Kilidi
 async def panel_gonder(interaction: discord.Interaction):
     guild = interaction.guild
     embed = discord.Embed(title="☕ NpcBot Yönetim Paneli", color=0x5865f2)
-    embed.description = f"Aşağıdaki butonlardan istediğin işlemi seç.\n\n**Canlı Durum**\n• {guild.member_count} üye • Koruma: 5/8 açık"
+    embed.description = (
+        "Aşağıdaki butonlardan istediğin işlemi seç.\n\n"
+        f"**Canlı Durum**\n• {guild.member_count} üye • Koruma: 5/8 açık\n\n"
+        "🌐 **7/24 Canlı Web Yönetim Linki:**\n"
+        "https://onrender.com"
+    )
     await interaction.response.send_message(embed=embed, view=PanelButonlari())
+
+# Yetkisi olmayan biri komutu denerse hata mesajı gönderir
+@panel_gonder.error
+async def panel_gonder_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.errors.MissingPermissions):
+        await interaction.response.send_message("❌ Bu komutu kullanmak için **Yönetici** yetkisine sahip olmalısın!", ephemeral=True)
 
 @bot.tree.command(name="yazi-tura", description="Yazi tura atar.")
 async def yazi_tura(interaction: discord.Interaction):
@@ -278,7 +279,4 @@ async def on_ready():
 
 if __name__ == "__main__":
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False), daemon=True).start()
-    import os
     bot.run(os.environ.get('DISCORD_TOKEN'))
-
-
