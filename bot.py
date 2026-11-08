@@ -4,12 +4,12 @@ from discord.ext import commands
 from flask import Flask, render_template_string, request, redirect, url_for
 
 app = Flask(__name__)
-bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir ve sunucunuza bagli."}
+bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir."}
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
     html_kod_blogu = """
@@ -19,28 +19,35 @@ def dashboard():
         <meta charset="UTF-8">
         <title>NpcBot Yönetim Paneli</title>
         <style>
-            body { background-color: #111214; color: #dbdee1; font-family: sans-serif; padding: 20px; }
-            .panel-container { max-width: 1000px; margin: auto; background: #2b2d31; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
-            h1 { color: #fff; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+            body { 
+                background: url('https://peakpx.com') no-repeat center center fixed; 
+                background-size: cover; color: #dbdee1; font-family: sans-serif; padding: 20px; 
+            }
+            .panel-container { 
+                max-width: 1000px; margin: auto; background: rgba(20, 20, 25, 0.65); backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px); padding: 25px; border-radius: 16px; 
+                box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); border: 2px solid #a855f7;
+            }
+            h1 { color: #fff; font-size: 26px; font-weight: bold; margin-bottom: 5px; text-shadow: 0 0 10px rgba(168,85,247,0.5); }
             .subtitle { color: #949ba4; font-size: 14px; margin-bottom: 25px; }
-            .section-title { font-size: 13px; text-transform: uppercase; color: #949ba4; font-weight: bold; margin-top: 25px; margin-bottom: 12px; letter-spacing: 0.5px; }
-            .btn-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 5px; }
-            .btn-custom { padding: 8px 18px; font-weight: 600; border-radius: 5px; font-size: 14px; border: none; cursor: pointer; }
-            .btn-green { background-color: #248046; color: white; }
-            .btn-red { background-color: #da373c; color: white; }
-            .btn-blue { background-color: #5865f2; color: white; }
-            .btn-dark-gray { background-color: #4e5058; color: white; }
-            .btn-orange { background-color: #faa81a; color: black; }
-            .stats-box { background-color: #1e1f22; padding: 15px; border-radius: 5px; margin-top: 15px; border-left: 4px solid #5865f2; }
-            .stats-box p { margin: 0; font-size: 14px; color: #b5bac1; line-height: 1.6; }
-            .alert-custom { background-color: #35373c; color: #dbdee1; border: none; border-left: 4px solid #248046; margin-bottom: 20px; padding: 12px; border-radius: 4px; }
-            .custom-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); }
-            .modal-content { background-color: #313338; margin: 15% auto; padding: 20px; border: 1px solid #4e5058; width: 400px; border-radius: 8px; color: white; }
-            .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+            .section-title { font-size: 13px; text-transform: uppercase; color: #a855f7; font-weight: bold; margin-top: 25px; margin-bottom: 12px; letter-spacing: 1px; }
+            .btn-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 5px; }
+            .btn-custom { 
+                padding: 10px 22px; font-weight: 600; border-radius: 10px; font-size: 14px; 
+                border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; background: rgba(0,0,0,0.4);
+            }
+            .btn-green { color: #2ecc71; border-color: #2ecc71; } .btn-green:hover { background: #2ecc71; color: white; box-shadow: 0 0 20px #2ecc71; }
+            .btn-red { color: #e74c3c; border-color: #e74c3c; } .btn-red:hover { background: #e74c3c; color: white; box-shadow: 0 0 20px #e74c3c; }
+            .btn-blue { color: #3498db; border-color: #3498db; } .btn-blue:hover { background: #3498db; color: white; box-shadow: 0 0 20px #3498db; }
+            .btn-dark-gray { color: #95a5a6; border-color: #95a5a6; } .btn-dark-gray:hover { background: #95a5a6; color: white; box-shadow: 0 0 20px #95a5a6; }
+            .btn-orange { color: #f39c12; border-color: #f39c12; } .btn-orange:hover { background: #f39c12; color: black; box-shadow: 0 0 20px #f39c12; }
+            .stats-box { background-color: rgba(0, 0, 0, 0.4); padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px solid #3498db; }
+            .alert-custom { background-color: rgba(0, 0, 0, 0.4); color: #dbdee1; border: 1px solid #2ecc71; margin-bottom: 20px; padding: 12px; border-radius: 10px; }
+            .custom-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); }
+            .modal-content { background-color: #1e1f22; margin: 15% auto; padding: 20px; border: 2px solid #a855f7; width: 400px; border-radius: 12px; color: white; }
             .close-btn { color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer; }
             .form-group { margin-bottom: 15px; }
-            .form-group label { display: block; margin-bottom: 5px; color: #b5bac1; font-size: 14px; }
-            .form-control-custom { width: 100%; padding: 10px; background-color: #1e1f22; color: white; border: 1px solid #3f4147; border-radius: 4px; box-sizing: border-box; }
+            .form-control-custom { width: 100%; padding: 10px; background-color: #111214; color: white; border: 1px solid #a855f7; border-radius: 6px; }
         </style>
     </head>
     <body>
@@ -48,7 +55,6 @@ def dashboard():
         <h1>☕ NpcBot Yönetim Paneli</h1>
         <p class="subtitle">Aşağıdaki butonlardan istediğin işlemi seç. Açılan form ekranı sadece sana görünür.</p>
         <div class="alert alert-custom">📢 <strong>Sistem Bildirimi:</strong> PAN_BILDIRIM</div>
-        
         <div class="section-title">İçerik ve Duyuru</div>
         <div class="btn-grid">
             <button class="btn-custom btn-green" onclick="setFormAction('duyuru')">Duyuru</button>
@@ -86,62 +92,49 @@ def dashboard():
     </div>
     <div id="islemModal" class="custom-modal">
       <div class="modal-content">
-        <div class="modal-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
           <h5 id="modalBaslik" style="margin:0; font-size:18px;">İşlem Formu</h5>
           <span class="close-btn" onclick="closeModal()">&times;</span>
         </div>
         <form action="/panel-islem-tetikleme" method="POST">
             <input type="hidden" name="islem_turu" id="hiddenIslemTuru">
-            <div class="form-group">
-                <label id="idEtiket">ID Girin:</label>
-                <input type="text" name="hedef_id" class="form-control-custom" required>
-            </div>
-            <div class="form-group">
-                <label id="icerikEtiket">Metin:</label>
-                <input type="text" name="metin_icerik" class="form-control-custom" value="Panel üzerinden işlem yapıldı.">
-            </div>
+            <div class="form-group"><label id="idEtiket">ID Girin:</label><input type="text" name="hedef_id" class="form-control-custom" required></div>
+            <div class="form-group"><label id="icerikEtiket">Metin:</label><input type="text" name="metin_icerik" class="form-control-custom" value="Panel üzerinden işlem yapıldı."></div>
             <div style="text-align: right; margin-top:20px;">
                 <button type="button" class="btn-custom btn-dark-gray" onclick="closeModal()" style="margin-right:5px;">İptal</button>
-                <button type="submit" class="btn-custom btn-blue" style="background-color:#5865f2;">Onayla</button>
+                <button type="submit" class="btn-custom btn-blue" style="background-color:#5865f2; border:none; border-radius:6px; padding:10px 20px; color:white;">Onayla</button>
             </div>
         </form>
       </div>
     </div>
     <script>
+        function openModal() { document.getElementById('islemModal').style.display = "block"; }
+        function closeModal() { document.getElementById('islemModal').style.display = "none"; }
         function setFormAction(action) {
             document.getElementById('hiddenIslemTuru').value = action;
-            var modal = document.getElementById('islemModal');
             var baslik = document.getElementById('modalBaslik');
             var idEtiket = document.getElementById('idEtiket');
             var icerikEtiket = document.getElementById('icerikEtiket');
             if(action === 'duyuru' || action === 'bot-adina-konus' || action === 'embed') {
-                baslik.innerText = action.toUpperCase() + " Gönderme Menüsü";
-                idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Mesaj İçeriği:";
+                baslik.innerText = action.toUpperCase() + " Menüsü"; idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Mesaj İçeriği:";
             } else if(action === 'mesaj-temizle') {
-                baslik.innerText = "Mesaj Temizleme";
-                idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
+                baslik.innerText = "Mesaj Temizleme"; idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
             } else if(action === 'kanal-kilidi') {
-                baslik.innerText = "Kanal Kilidi";
-                idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
+                baslik.innerText = "Kanal Kilidi"; idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
             } else if(action === 'yavas-mod') {
-                baslik.innerText = "Yavaş Mod";
-                idEtiket.innerText = "Saniye (0 = kapat):"; icerikEtiket.innerText = "Kanal ID:";
+                baslik.innerText = "Yavaş Mod"; idEtiket.innerText = "Saniye:"; icerikEtiket.innerText = "Kanal ID:";
             } else {
-                baslik.innerText = action.toUpperCase() + " Menüsü";
-                idEtiket.innerText = "Kullanıcı ID:"; icerikEtiket.innerText = "Gerekçe / Rol Adı:";
+                baslik.innerText = action.toUpperCase() + " Menüsü"; idEtiket.innerText = "Kullanıcı ID:"; icerikEtiket.innerText = "Gerekçe:";
             }
-            modal.style.display = "block";
+            openModal();
         }
-        function closeModal() { document.getElementById('islemModal').style.display = "none"; }
     </script>
     </body>
     </html>
     """
     html_kod_blogu = html_kod_blogu.replace("PAN_BILDIRIM", bot_ayarlari['islem_sonucu'])
-    html_kod_blogu = html_kod_blogu.replace("PAN_UYE", str(uye_sayisi))
-    html_kod_blogu = html_kod_blogu.replace("PAN_SES", str(sesteki_sayisi))
-    html_kod_blogu = html_kod_blogu.replace("PAN_MS", str(bot_gecikme))
-    html_kod_blogu = html_kod_blogu.replace("PAN_DURUM", bot_ayarlari['web_panel_durum'])
+    html_kod_blogu = html_kod_blogu.replace("PAN_UYE", str(uye_sayisi)).replace("PAN_SES", str(sesteki_sayisi))
+    html_kod_blogu = html_kod_blogu.replace("PAN_MS", str(bot_gecikme)).replace("PAN_DURUM", bot_ayarlari['web_panel_durum'])
     return render_template_string(html_kod_blogu)
 @app.route('/panel-islem-tetikleme', methods=['POST'])
 def panel_islem_tetikleme():
@@ -159,51 +152,44 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-async def discord_sistem_yonet(islem, hedef_id, text_data):
+async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
         guild = bot.guilds[0]
         if islem == 'kanal-kilidi':
-            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(hedef_id))
-            if not kanal: return "Hata: Kanal bulunamadi."
+            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
             overwrite = kanal.overwrites_for(guild.default_role)
-            if hedef_id == "kilitle": overwrite.send_messages = False
+            if network_id == "kilitle": overwrite.send_messages = False
             else: overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
-            return "Kanal ayarlandi."
+            return "Kanal kilidi guncellendi."
         if islem == 'yavas-mod':
             kanal = guild.get_channel(int(text_data))
-            if not kanal: return "Hata: Kanal bulunamadi."
-            await kanal.edit(slowmode_delay=int(hedef_id))
-            return f"Basarili: Yavas mod ayarlandi."
+            await kanal.edit(slowmode_delay=int(network_id))
+            return "Yavas mod guncellendi."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
-            kanal = guild.get_channel(int(hedef_id))
-            if not kanal: return "Hata: Kanal bulunamadi."
+            kanal = guild.get_channel(int(network_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
-            return "Basarili: Mesaj iletildi."
+            return "Mesaj gonderildi."
         if islem == 'mesaj-temizle':
-            kanal = guild.get_channel(int(hedef_id))
-            if not kanal: return "Hata: Kanal bulunamadi."
+            kanal = guild.get_channel(int(network_id))
             await kanal.purge(limit=int(text_data))
-            return "Temizlendi."
+            return "Mesajlar temizlendi."
         if islem == 'ban-ac':
-            user = await bot.fetch_user(int(hedef_id))
-            await guild.unban(user, reason=text_data)
-            return f"Basarili: {user.name} yasagi kaldirildi."
-        member = guild.get_member(int(hedef_id))
+            user = await bot.fetch_user(int(network_id))
+            await guild.unban(user)
+            return "Ban acildi."
+        member = guild.get_member(int(network_id))
         if not member: return "Hata: Kullanici bulunamadi."
         if islem == 'sustur': await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
         elif islem == 'at': await member.kick(reason=text_data)
         elif islem == 'banla': await member.ban(reason=text_data)
-        return "Basarili."
-    except Exception as e: return f"Discord Hatasi: {e}"
+        return "Islem basarili."
+    except Exception as e: return f"Hata: {e}"
 
 @bot.event
 async def on_member_join(member):
-    try: await member.send(f"Merhaba {member.name}! Sunucumuza hos geldin.")
-    except discord.Forbidden: pass
     rol = discord.utils.get(member.guild.roles, name="Uye")
     if rol: await member.add_roles(rol)
 class PanelButonlari(discord.ui.View):
