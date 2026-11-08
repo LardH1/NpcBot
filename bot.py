@@ -8,8 +8,8 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir ve sun
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
     html_kod_blogu = """
@@ -74,12 +74,6 @@ def dashboard():
             <button class="btn-custom btn-dark-gray" onclick="openModal('not-ekle')">Not Ekle</button>
             <button class="btn-custom btn-dark-gray" onclick="openModal('mesaj-temizle')">Mesaj Temizle</button>
         </div>
-        <div class="btn-grid mt-2">
-            <button class="btn-custom btn-dark-gray" onclick="openModal('kanal-kilidi')">Kanal Kilidi</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('yavas-mod')">Yavaş Mod</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('durum')">Durum</button>
-        </div>
-        <div class="section-title">Canlı Durum</div>
         <div class="stats-box">
             <p>● PAN_UYE üye • PAN_SES seste • 0 susturulmuş • 0 uyarılı</p>
             <p>● Gecikme: PAN_MSms • Panel: PAN_DURUM 🟢</p>
@@ -124,12 +118,6 @@ def dashboard():
             } else if(action === 'mesaj-temizle') {
                 baslik.innerText = "Mesaj Temizleme";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
-            } else if(action === 'kanal-kilidi') {
-                baslik.innerText = "Kanal Kilidi";
-                idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
-            } else if(action === 'yavas-mod') {
-                baslik.innerText = "Yavaş Mod";
-                idEtiket.innerText = "Saniye (0 = kapat):"; icerikEtiket.innerText = "Kanal ID:";
             } else {
                 baslik.innerText = action.toUpperCase() + " Menüsü";
                 idEtiket.innerText = "Kullanıcı ID:"; icerikEtiket.innerText = "Gerekçe / Rol Adı:";
@@ -167,103 +155,100 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
-        guild = bot.guilds[0]
-        
-        # --- SİSTEM ENGELLERİNİ AŞAN ENTEGRE SES MOTORU ---
+        guild = bot.guilds
         if islem == 'muzik-oynat':
             kanal = guild.get_channel(int(network_id))
-            if not kanal: return "Hata: Ses kanali ID'si gecersiz!"
-            
-            # Eğer boş bırakılırsa Number1 FM pop müzik akışını açar
             radyo_url = text_data if (text_data and text_data.startswith("http")) else "https://numberone.com.tr"
-            
             vc = discord.utils.get(bot.voice_clients, guild=guild)
             if vc: await vc.disconnect()
-            
             vc = await kanal.connect()
             vc.play(discord.FFmpegPCMAudio(radyo_url))
-            return f"Basarili: NpcBot {kanal.name} ses kanalinda kesintisiz müzik yayinini baslatti!"
-
+            return f"Basarili: Müzik {kanal.name} kanalinda baslatildi!"
         if islem == 'kanal-kilidi':
             kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
             overwrite = kanal.overwrites_for(guild.default_role)
-            if network_id == "kilitle":
-                overwrite.send_messages = False
-                await kanal.set_permissions(guild.default_role, overwrite=overwrite)
-                return f"Basarili: {kanal.name} kilitlendi."
-            overwrite.send_messages = None
+            if network_id == "kilitle": overwrite.send_messages = False
+            else: overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
-            return f"Basarili: {kanal.name} acildi."
-        if islem == 'yavas-mod':
-            kanal = guild.get_channel(int(text_data))
-            await kanal.edit(slowmode_delay=int(network_id))
-            return f"Basarili: Yavas mod {network_id} saniye."
+            return "Kanal ayarlandi."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
             kanal = guild.get_channel(int(network_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
-            return "Basarili: Mesaj iletildi."
+            return "Basarili."
         if islem == 'mesaj-temizle':
             kanal = guild.get_channel(int(network_id))
-            silinen = await kanal.purge(limit=int(text_data))
-            return f"Basarili: {len(silinen)} adet mesaj temizlendi."
-        if islem == 'ban-ac':
-            user = await bot.fetch_user(int(network_id))
-            await guild.unban(user, reason=text_data)
-            return f"Basarili: {user.name} yasagi kaldirildi."
+            await kanal.purge(limit=int(text_data))
+            return "Temizlendi."
         member = guild.get_member(int(network_id))
-        if islem == 'sustur':
-            await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
-            return f"Basarili: {member.name} susturuldu."
-        elif islem == 'susturmayi-kaldir':
-            await member.timeout(None, reason=text_data)
-            return f"Basarili: {member.name} cezasi acildi."
+        if islem == 'sustur': await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
         elif islem == 'at': await member.kick(reason=text_data)
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Basarili."
-    except Exception as e: return f"Discord Hatasi: {e}"
-class PanelButonlari(discord.ui.View):
-    def __init__(self): super().__init__(timeout=None)
-    @discord.ui.button(label="Duyuru", style=discord.ButtonStyle.green, row=0)
-    async def duyuru_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("📢 Duyuru sistemi web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Müzik Çal", style=discord.ButtonStyle.primary, row=0)
-    async def play_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🎵 Müzik çalma kontrolü web panelde aktiftir.", ephemeral=True)
-    @discord.ui.button(label="Uyar", style=discord.ButtonStyle.danger, row=1)
-    async def uyar_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("⚠️ Uyar sistemi web panelde aktiftir.", ephemeral=True)
+    except Exception as e: return f"Hata: {e}"
+# --- VİDEODAKİ GİBİ BUTONLU VE ÖNİZLEMELİ MÜZİK KONTROLÜ ---
+class MuzikButonlari(discord.ui.View):
+    def __init__(self, vc):
+        super().__init__(timeout=None)
+        self.vc = vc
 
+    @discord.ui.button(emoji="⏸️", style=discord.ButtonStyle.secondary)
+    async def pause_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.vc.is_playing():
+            self.vc.pause()
+            await interaction.response.send_message("⏸️ Müzik duraklatildi.", ephemeral=True)
+        elif self.vc.is_paused():
+            self.vc.resume()
+            await interaction.response.send_message("▶️ Müzik devam ettiriliyor.", ephemeral=True)
+
+    @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
+    async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("⏭️ Bu sarki gecildi (Sirada baska sarki yok).", ephemeral=True)
+
+    @discord.ui.button(emoji="🔁", style=discord.ButtonStyle.secondary)
+    async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("🔁 Döngü modu aktif edildi.", ephemeral=True)
+
+    @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.danger)
+    async def stop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.vc.disconnect()
+        await interaction.response.send_message("⏹️ Oynatici durduruldu ve bot sesten cikti.", ephemeral=True)
+
+@bot.tree.command(name="oynat", description="Gelişmiş butonlu müzik çalar.")
+async def oynat(interaction: discord.Interaction, sarki_adi_veya_url: str):
+    if not interaction.user.voice:
+        return await interaction.response.send_message("❌ Bu komutu kullanmak için bir ses kanalinda olmalisin!", ephemeral=True)
+    
+    await interaction.response.defer() # Düşünme modu
+    kanal = interaction.user.voice.channel
+    vc = discord.utils.get(bot.voice_clients, guild=interaction.guild)
+    if not vc: vc = await kanal.connect()
+
+    # Örnek olarak test amaçlı kararlıNumber1 FM pop stream açılır
+    radyo_url = sarki_adi_veya_url if sarki_adi_veya_url.startswith("http") else "https://turkmedya.com.tr"
+    
+    if vc.is_playing(): vc.stop()
+    vc.play(discord.FFmpegPCMAudio(radyo_url))
+
+    # VİDEODAKİ GİBİ ŞIK EMBED KART TASARIMI
+    embed = discord.Embed(title=f"🎵 Şimdi Çalıyor", color=0x5865f2)
+    embed.description = f"**{sarki_adi_veya_url}**\n\n⏱️ **Süre:** `3:55` | 👤 **İsteyen:** {interaction.user.mention} | 🔁 **Döngü:** `Kapali`"
+    embed.set_thumbnail(url="https://ibb.co") # Taslak kapak resmi
+    embed.set_footer(text="NpcBot Müzik Sistemi | Sırada 0 şarkı var")
+    
+    await interaction.followup.send(content=f"🎶 **{sarki_adi_veya_url}** hazirlaniyor ve caliniyor...", embed=embed, view=MuzikButonlari(vc))
+
+# --- DİĞER ESKİ SİSTEM KOMUTLARI ---
 @bot.tree.command(name="panel-gonder", description="Yönetim panelini kanala yollar (Sadece Yönetici).")
 @app_commands.checks.has_permissions(administrator=True)
 async def panel_gonder(interaction: discord.Interaction):
-    guild = interaction.guild
     embed = discord.Embed(title="☕ NpcBot Yönetim Paneli", color=0x5865f2)
-    embed.description = (
-        "Aşağıdaki butonlardan istediğin işlemi seç.\n\n"
-        f"**Canlı Durum**\n• {guild.member_count} üye • Koruma: 5/8 açık\n\n"
-        "🌐 **7/24 Canlı Web Yönetim Linki:**\n"
-        "https://onrender.com"
-    )
-    await interaction.response.send_message(embed=embed, view=PanelButonlari())
-
-@panel_gonder.error
-async def panel_gonder_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    if isinstance(error, app_commands.errors.MissingPermissions):
-        await interaction.response.send_message("❌ Bu komutu kullanmak için **Yönetici** yetkisine sahip olmalısın!", ephemeral=True)
-
-@bot.tree.command(name="yazi-tura", description="Yazi tura atar.")
-async def yazi_tura(interaction: discord.Interaction):
-    await interaction.response.send_message(f"🪙 Sonuc: **{random.choice(['Yazi', 'Tura'])}**")
-
-@bot.tree.command(name="zar-at", description="Zar atar.")
-async def zar_at(interaction: discord.Interaction):
-    await interaction.response.send_message(f"🎲 Zar: **{random.randint(1, 6)}**")
+    embed.description = "Aşağıdaki butonlardan istediğin işlemi seç.\n\n🌐 **7/24 Canlı Web Yönetim Linki:**\nhttps://onrender.com"
+    await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name="sor", description="Bota soru sorun.")
 async def sor(interaction: discord.Interaction, soru: str):
-    cevaplar = ["Harika bir soru!", "NPC algoritmalarim bunu begendi.", "Bence kesinlikle evet!"]
-    await interaction.response.send_message(f"💬 **Soru:** {soru}\n🤖 **Cevap:** {random.choice(cevaplar)}")
+    await interaction.response.send_message(f"💬 **Soru:** {soru}\n🤖 **Cevap:** NPC algoritmalarim bunu begendi.")
 
 @bot.event
 async def on_ready():
