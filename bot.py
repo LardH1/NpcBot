@@ -51,29 +51,35 @@ def dashboard():
         
         <div class="section-title">İçerik, Duyuru ve Müzik</div>
         <div class="btn-grid">
-            <button class="btn-custom btn-green" onclick="openModal('duyuru')">Duyuru</button>
-            <button class="btn-custom btn-green" onclick="openModal('bot-adina-konus')">Bot Adına Konuş</button>
-            <button class="btn-custom btn-green" onclick="openModal('embed')">Embed</button>
-            <button class="btn-custom btn-blue" onclick="openModal('muzik-oynat')">🎵 Müzik Çal</button>
+            <button class="btn-custom btn-green" onclick="setFormAction('duyuru')">Duyuru</button>
+            <button class="btn-custom btn-green" onclick="setFormAction('bot-adina-konus')">Bot Adına Konuş</button>
+            <button class="btn-custom btn-green" onclick="setFormAction('embed')">Embed</button>
+            <button class="btn-custom btn-blue" onclick="setFormAction('muzik-oynat')">🎵 Müzik Çal</button>
         </div>
         <div class="section-title">Moderasyon</div>
         <div class="btn-grid">
-            <button class="btn-custom btn-red" onclick="openModal('uyar')">Uyar</button>
-            <button class="btn-custom btn-red" onclick="openModal('sustur')">Sustur</button>
-            <button class="btn-custom btn-red" onclick="openModal('at')">At</button>
-            <button class="btn-custom btn-red" onclick="openModal('banla')">Banla</button>
-            <button class="btn-custom btn-green" onclick="openModal('ban-ac')">Ban Aç</button>
+            <button class="btn-custom btn-red" onclick="setFormAction('uyar')">Uyar</button>
+            <button class="btn-custom btn-red" onclick="setFormAction('sustur')">Sustur</button>
+            <button class="btn-custom btn-red" onclick="setFormAction('at')">At</button>
+            <button class="btn-custom btn-red" onclick="setFormAction('banla')">Banla</button>
+            <button class="btn-custom btn-green" onclick="setFormAction('ban-ac')">Ban Aç</button>
         </div>
         <div class="section-title">Karantina</div>
-        <div class="btn-grid"><button class="btn-custom btn-orange" onclick="openModal('karantina')">Karantina</button></div>
+        <div class="btn-grid"><button class="btn-custom btn-orange" onclick="setFormAction('karantina')">Karantina</button></div>
         <div class="section-title">İnceleme ve Araçlar</div>
         <div class="btn-grid">
-            <button class="btn-custom btn-blue" onclick="openModal('uye-sicili')">Üye Sicili</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('susturmayi-kaldir')">Susturmayı Kaldır</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('uyari-sil')">Uyarı Sil</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('not-ekle')">Not Ekle</button>
-            <button class="btn-custom btn-dark-gray" onclick="openModal('mesaj-temizle')">Mesaj Temizle</button>
+            <button class="btn-custom btn-blue" onclick="setFormAction('uye-sicili')">Üye Sicili</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('susturmayi-kaldir')">Susturmayı Kaldır</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('uyari-sil')">Uyarı Sil</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('not-ekle')">Not Ekle</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('mesaj-temizle')">Mesaj Temizle</button>
         </div>
+        <div class="btn-grid mt-2">
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('kanal-kilidi')">Kanal Kilidi</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('yavas-mod')">Yavaş Mod</button>
+            <button class="btn-custom btn-dark-gray" onclick="setFormAction('durum')">Durum</button>
+        </div>
+        <div class="section-title">Canlı Durum</div>
         <div class="stats-box">
             <p>● PAN_UYE üye • PAN_SES seste • 0 susturulmuş • 0 uyarılı</p>
             <p>● Gecikme: PAN_MSms • Panel: PAN_DURUM 🟢</p>
@@ -103,7 +109,7 @@ def dashboard():
       </div>
     </div>
     <script>
-        function openModal(action) {
+        function setFormAction(action) {
             document.getElementById('hiddenIslemTuru').value = action;
             var modal = document.getElementById('islemModal');
             var baslik = document.getElementById('modalBaslik');
@@ -118,6 +124,12 @@ def dashboard():
             } else if(action === 'mesaj-temizle') {
                 baslik.innerText = "Mesaj Temizleme";
                 idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
+            } else if(action === 'kanal-kilidi') {
+                baslik.innerText = "Kanal Kilidi";
+                idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
+            } else if(action === 'yavas-mod') {
+                baslik.innerText = "Yavaş Mod";
+                idEtiket.innerText = "Saniye (0 = kapat):"; icerikEtiket.innerText = "Kanal ID:";
             } else {
                 baslik.innerText = action.toUpperCase() + " Menüsü";
                 idEtiket.innerText = "Kullanıcı ID:"; icerikEtiket.innerText = "Gerekçe / Rol Adı:";
@@ -140,7 +152,7 @@ def panel_islem_tetikleme():
     islem = request.form.get("islem_turu")
     hedef_id = request.form.get("hedef_id")
     metin = request.form.get("metin_icerik")
-    fut = asyncio.run_coroutine_threadsafe(discord_sistem_yonet(islem, hedef_id, metin), bot.loop)
+    fut = asyncio.run_coroutine_threadsafe(discord_sistem_yonet(islem, Tech_id=hedef_id, text_data=metin), bot.loop)
     try:
         bot_ayarlari["islem_sonucu"] = fut.result(timeout=10)
     except Exception as e:
@@ -152,41 +164,51 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-async def discord_sistem_yonet(islem, network_id, text_data):
+async def discord_sistem_yonet(islem, Tech_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
         guild = bot.guilds
+        
+        # --- BULUT ENGELLERİNİ AŞAN SAF SES AKIŞ SİSTEMİ ---
         if islem == 'muzik-oynat':
-            kanal = guild.get_channel(int(network_id))
-            radyo_url = text_data if (text_data and text_data.startswith("http")) else "https://numberone.com.tr"
+            kanal = guild.get_channel(int(Tech_id))
+            if not_kanal: return "Hata: Ses kanali ID'si gecersiz!"
+            
+            # Canlı test için internet üzerindeki en kararlı canlı radyo akış linki (Kral Pop)
+            radyo_url = text_data if (text_data and text_data.startswith("http")) else "https://radyo.net.tr"
+            
             vc = discord.utils.get(bot.voice_clients, guild=guild)
             if vc: await vc.disconnect()
+            
             vc = await kanal.connect()
-            vc.play(discord.FFmpegPCMAudio(radyo_url))
-            return f"Basarili: Müzik {kanal.name} kanalinda baslatildi!"
+            # Kesintisiz bağlantı sağlayan kararlı Gateway ses kodlama ayarları
+            options = "-vn -loglevel quiet"
+            before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+            vc.play(discord.FFmpegPCMAudio(radyo_url, options=options, before_options=before_options))
+            return f"Basarili: NpcBot {kanal.name} ses kanalinda kesintisiz yayina basladi!"
+
         if islem == 'kanal-kilidi':
-            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(text_data)) if text_data.isdigit() else guild.get_channel(int(Tech_id))
             overwrite = kanal.overwrites_for(guild.default_role)
-            if network_id == "kilitle": overwrite.send_messages = False
+            if Tech_id == "kilitle": overwrite.send_messages = False
             else: overwrite.send_messages = None
             await kanal.set_permissions(guild.default_role, overwrite=overwrite)
             return "Kanal ayarlandi."
         if islem in ['duyuru', 'bot-adina-konus', 'embed']:
-            kanal = guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(Tech_id))
             if islem == 'embed': await kanal.send(embed=discord.Embed(description=text_data, color=0x5865f2))
             else: await kanal.send(text_data)
             return "Basarili."
         if islem == 'mesaj-temizle':
-            kanal = guild.get_channel(int(network_id))
+            kanal = guild.get_channel(int(Tech_id))
             await kanal.purge(limit=int(text_data))
             return "Temizlendi."
-        member = guild.get_member(int(network_id))
+        member = guild.get_member(int(Tech_id))
         if islem == 'sustur': await member.timeout(datetime.timedelta(minutes=10), reason=text_data)
         elif islem == 'at': await member.kick(reason=text_data)
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Basarili."
     except Exception as e: return f"Hata: {e}"
-# --- VİDEODAKİ GİBİ BUTONLU VE ÖNİZLEMELİ MÜZİK KONTROLÜ ---
 class MuzikButonlari(discord.ui.View):
     def __init__(self, vc):
         super().__init__(timeout=None)
@@ -203,7 +225,7 @@ class MuzikButonlari(discord.ui.View):
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
     async def skip_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("⏭️ Bu sarki gecildi (Sirada baska sarki yok).", ephemeral=True)
+        await interaction.response.send_message("⏭️ Bu sarki gecildi (Sirada sarki yok).", ephemeral=True)
 
     @discord.ui.button(emoji="🔁", style=discord.ButtonStyle.secondary)
     async def loop_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -219,32 +241,55 @@ async def oynat(interaction: discord.Interaction, sarki_adi_veya_url: str):
     if not interaction.user.voice:
         return await interaction.response.send_message("❌ Bu komutu kullanmak için bir ses kanalinda olmalisin!", ephemeral=True)
     
-    await interaction.response.defer() # Düşünme modu
+    await interaction.response.defer()
     kanal = interaction.user.voice.channel
     vc = discord.utils.get(bot.voice_clients, guild=interaction.guild)
     if not vc: vc = await kanal.connect()
 
-    # Örnek olarak test amaçlı kararlıNumber1 FM pop stream açılır
-    radyo_url = sarki_adi_veya_url if sarki_adi_veya_url.startswith("http") else "https://turkmedya.com.tr"
-    
+    # Canlı radyo yayını kullanarak kararlı akış başlatma (Boş bırakılırsa Kral Pop çalar)
+    radyo_url = sarki_adi_veya_url if sarki_adi_veya_url.startswith("http") else "https://radyo.net.tr"
     if vc.is_playing(): vc.stop()
-    vc.play(discord.FFmpegPCMAudio(radyo_url))
-
-    # VİDEODAKİ GİBİ ŞIK EMBED KART TASARIMI
-    embed = discord.Embed(title=f"🎵 Şimdi Çalıyor", color=0x5865f2)
-    embed.description = f"**{sarki_adi_veya_url}**\n\n⏱️ **Süre:** `3:55` | 👤 **İsteyen:** {interaction.user.mention} | 🔁 **Döngü:** `Kapali`"
-    embed.set_thumbnail(url="https://ibb.co") # Taslak kapak resmi
-    embed.set_footer(text="NpcBot Müzik Sistemi | Sırada 0 şarkı var")
     
+    options = "-vn -loglevel quiet"
+    before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+    vc.play(discord.FFmpegPCMAudio(radyo_url, options=options, before_options=before_options))
+
+    embed = discord.Embed(title=f"🎵 Şimdi Çalıyor", color=0x5865f2)
+    embed.description = f"**{sarki_adi_veya_url}**\n\n⏱️ **Süre:** `Canlı Yayın` | 👤 **İsteyen:** {interaction.user.mention} | 🔁 **Döngü:** `Kapali`"
+    embed.set_footer(text="NpcBot Müzik Sistemi | Sırada 0 şarkı var")
     await interaction.followup.send(content=f"🎶 **{sarki_adi_veya_url}** hazirlaniyor ve caliniyor...", embed=embed, view=MuzikButonlari(vc))
 
-# --- DİĞER ESKİ SİSTEM KOMUTLARI ---
+class PanelButonlari(discord.ui.View):
+    def __init__(self): super().__init__(timeout=None)
+    @discord.ui.button(label="Duyuru", style=discord.ButtonStyle.green)
+    async def duyuru_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("📢 Duyuru sistemi web panelde aktiftir.", ephemeral=True)
+
 @bot.tree.command(name="panel-gonder", description="Yönetim panelini kanala yollar (Sadece Yönetici).")
 @app_commands.checks.has_permissions(administrator=True)
 async def panel_gonder(interaction: discord.Interaction):
+    guild = interaction.guild
     embed = discord.Embed(title="☕ NpcBot Yönetim Paneli", color=0x5865f2)
-    embed.description = "Aşağıdaki butonlardan istediğin işlemi seç.\n\n🌐 **7/24 Canlı Web Yönetim Linki:**\nhttps://onrender.com"
-    await interaction.response.send_message(embed=embed)
+    embed.description = (
+        "Aşağıdaki butonlardan istediğin işlemi seç.\n\n"
+        f"**Canlı Durum**\n• {guild.member_count} üye • Koruma: 5/8 açık\n\n"
+        "🌐 **7/24 Canlı Web Yönetim Linki:**\n"
+        "https://onrender.com"
+    )
+    await interaction.response.send_message(embed=embed, view=PanelButonlari())
+
+@panel_gonder.error
+async def panel_gonder_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.errors.MissingPermissions):
+        await interaction.response.send_message("❌ Bu komutu kullanmak için **Yönetici** yetkisine sahip olmalısın!", ephemeral=True)
+
+@bot.tree.command(name="yazi-tura", description="Yazi tura atar.")
+async def yazi_tura(interaction: discord.Interaction):
+    await interaction.response.send_message(f"🪙 Sonuc: **{random.choice(['Yazi', 'Tura'])}**")
+
+@bot.tree.command(name="zar-at", description="Zar atar.")
+async def zar_at(interaction: discord.Interaction):
+    await interaction.response.send_message(f"🎲 Zar: **{random.randint(1, 6)}**")
 
 @bot.tree.command(name="sor", description="Bota soru sorun.")
 async def sor(interaction: discord.Interaction, soru: str):
