@@ -8,8 +8,8 @@ bot_ayarlari = {"web_panel_durum": "Aktif", "islem_sonucu": "Sistem hazir."}
 
 @app.route('/')
 def dashboard():
-    uye_sayisi = bot.guilds.member_count if bot.guilds else 0
-    sesteki_sayisi = sum(len(c.members) for c in bot.guilds.voice_channels) if bot.guilds else 0
+    uye_sayisi = bot.guilds[0].member_count if bot.guilds else 0
+    sesteki_sayisi = sum(len(c.members) for c in bot.guilds[0].voice_channels) if bot.guilds else 0
     bot_gecikme = round(bot.latency * 1000) if bot.latency else 0
 
     html_kod_blogu = """
@@ -91,7 +91,7 @@ def dashboard():
         </div>
     </div>
     <div id="islemModal" class="custom-modal">
-      <div class="modal-content">
+      <div class="modal-content" style="padding:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
           <h5 id="modalBaslik" style="margin:0; font-size:18px;">İşlem Formu</h5>
           <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -120,7 +120,7 @@ def dashboard():
             } else if(action === 'mesaj-temizle') {
                 baslik.innerText = "Mesaj Temizleme"; idEtiket.innerText = "Kanal ID:"; icerikEtiket.innerText = "Silinecek Adet:";
             } else if(action === 'kanal-kilidi') {
-                baslik.innerText = "Kanal Kilidi"; idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
+                baslik.innerText = "Kanal Kilidi"; idEtiket.innerText = "İşlem (kilitle / ac):"; idEtiket.innerText = "İşlem (kilitle / ac):"; icerikEtiket.innerText = "Kanal ID:";
             } else if(action === 'yavas-mod') {
                 baslik.innerText = "Yavaş Mod"; idEtiket.innerText = "Saniye:"; icerikEtiket.innerText = "Kanal ID:";
             } else {
@@ -152,6 +152,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
 async def discord_sistem_yonet(islem, network_id, text_data):
     try:
         if not bot.guilds: return "Hata: Bot sunucu bulamadi."
@@ -187,11 +188,11 @@ async def discord_sistem_yonet(islem, network_id, text_data):
         elif islem == 'banla': await member.ban(reason=text_data)
         return "Islem basarili."
     except Exception as e: return f"Hata: {e}"
-
 @bot.event
 async def on_member_join(member):
     rol = discord.utils.get(member.guild.roles, name="Uye")
     if rol: await member.add_roles(rol)
+
 class PanelButonlari(discord.ui.View):
     def __init__(self): super().__init__(timeout=None)
     @discord.ui.button(label="Duyuru", style=discord.ButtonStyle.green)
@@ -203,17 +204,12 @@ class PanelButonlari(discord.ui.View):
 async def panel_gonder(interaction: discord.Interaction):
     guild = interaction.guild
     embed = discord.Embed(title="☕ NpcBot Yönetim Paneli", color=0x5865f2)
-    embed.description = (
-        "Aşağıdaki butonlardan istediğin işlemi seç.\n\n"
-        f"**Canlı Durum**\n• {guild.member_count} üye • Koruma: 5/8 açık\n\n"
-        "🌐 **7/24 Canlı Web Yönetim Linki:**\n"
-        "https://onrender.com"
-    )
+    embed.description = "Aşağıdaki butonlardan istediğin işlemi seç.\n\n🌐 **7/24 Canlı Web Yönetim Linki:**\nhttps://onrender.com"
     await interaction.response.send_message(embed=embed, view=PanelButonlari())
 
 @panel_gonder.error
 async def panel_gonder_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
-    if isinstance(error, app_commands.errors.MissingPermissions):
+    if isinstance(error, app_commands.AppCommandError):
         await interaction.response.send_message("❌ Bu komutu kullanmak için **Yönetici** yetkisine sahip olmalısın!", ephemeral=True)
 
 @bot.tree.command(name="yazi-tura", description="Yazi tura atar.")
