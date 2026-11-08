@@ -278,5 +278,7 @@ async def on_ready():
 
 if __name__ == "__main__":
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False), daemon=True).start()
-    bot.run('MTU2OTA1NDk0NjYxODM3NjM5NA.GkVkyN.pYsthjb4FVwP7W957TQvOPqlL05pX40lwChu0k')
+    import os
+    bot.run(os.environ.get('DISCORD_TOKEN'))
+
 
